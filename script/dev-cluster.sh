@@ -40,6 +40,7 @@ rpc_public_addr = "127.0.0.1:$((3900+$count))"
 bootstrap_peers = []
 replication_mode = "3"
 rpc_secret = "$NETWORK_SECRET"
+webhook_uri = "http://localhost:8088"
 
 [s3_api]
 api_bind_addr = "0.0.0.0:$((3910+$count))"	# the S3 API port, HTTP without TLS. Add a reverse proxy for the TLS part.

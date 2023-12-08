@@ -33,6 +33,7 @@ use crate::s3::post_object::handle_post_object;
 use crate::s3::put::*;
 use crate::s3::router::Endpoint;
 use crate::s3::website::*;
+use crate::s3::webhooks::*;
 
 pub struct S3ApiServer {
 	garage: Arc<Garage>,
@@ -212,7 +213,16 @@ impl ApiHandler for S3ApiServer {
 				.await
 			}
 			Endpoint::PutObject { key } => {
-				handle_put(garage, req, &bucket, &key, content_sha256).await
+				// handle_put(garage, req, &bucket, &key, content_sha256)
+				let put_resp = handle_put(garage.clone(), req, &bucket, &key, content_sha256).await?;
+				// Look more into status to maybe not limit to status 200-299
+				if put_resp.status().is_success() {
+					// Is there already a ackground runner in Garage?
+					// Used to be one with last year version with Arc<BackgroundRunner>
+					// Maybe look at spawn_workers(&bg)
+					let _ = tokio::spawn(call_hook(garage.clone(), ObjectHook::new("PutObject", bucket_name, bucket_id, &key, api_key.key_id))).await;
+				}
+				Ok(put_resp)
 			}
 			Endpoint::AbortMultipartUpload { key, upload_id } => {
 				handle_abort_multipart_upload(garage, bucket_id, &key, &upload_id).await

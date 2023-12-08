@@ -12,6 +12,7 @@ mod multipart;
 mod post_object;
 mod put;
 mod website;
+mod webhooks;
 
 mod router;
 pub mod xml;
