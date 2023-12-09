@@ -28,6 +28,8 @@ use garage_util::forwarded_headers;
 use garage_util::metrics::{gen_trace_id, RecordDuration};
 use garage_util::socket_address::UnixOrTCPSocketAddress;
 
+use garage_model::bucket_table::CorsRule;
+
 pub(crate) trait ApiEndpoint: Send + Sync + 'static {
 	fn name(&self) -> &'static str;
 	fn add_span_attributes(&self, span: SpanRef<'_>);
@@ -48,6 +50,7 @@ pub(crate) trait ApiHandler: Send + Sync + 'static {
 	type Error: ApiError;
 
 	fn parse_endpoint(&self, r: &Request<Body>) -> Result<Self::Endpoint, Self::Error>;
+	fn check_status(&self, matching_cors_rule: Option<&CorsRule>, res: Result<Response<Body>, Self::Error>) -> Result<Response<Body>, Self::Error>;
 	async fn handle(
 		&self,
 		req: Request<Body>,

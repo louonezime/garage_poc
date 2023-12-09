@@ -15,10 +15,10 @@ use opentelemetry_prometheus::PrometheusExporter;
 use prometheus::{Encoder, TextEncoder};
 
 use garage_model::garage::Garage;
+use garage_model::bucket_table::CorsRule;
 use garage_rpc::system::ClusterHealthStatus;
 use garage_util::error::Error as GarageError;
 use garage_util::socket_address::UnixOrTCPSocketAddress;
-
 use crate::generic_server::*;
 
 use crate::admin::bucket::*;
@@ -236,6 +236,15 @@ impl ApiHandler for AdminApiServer {
 		} else {
 			Endpoint::from_request(req)
 		}
+	}
+
+	fn check_status(
+		&self,
+		_matching_cors_rule: Option<&CorsRule>,
+		res: Result<Response<Body>, Error>
+	) -> Result<Response<Body>, self::Error> {
+		let mut resp_ok = res?;
+		Ok(resp_ok)
 	}
 
 	async fn handle(

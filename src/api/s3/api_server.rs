@@ -13,6 +13,7 @@ use garage_util::socket_address::UnixOrTCPSocketAddress;
 
 use garage_model::garage::Garage;
 use garage_model::key_table::Key;
+use garage_model::bucket_table::{CorsRule};
 
 use crate::generic_server::*;
 use crate::s3::error::*;
@@ -101,6 +102,20 @@ impl ApiHandler for S3ApiServer {
 			bucket_name,
 			endpoint,
 		})
+	}
+
+	fn check_status(
+		&self,
+		matching_cors_rule: Option<&CorsRule>,
+		res: Result<Response<Body>, Error>
+	) -> Result<Response<Body>, self::Error> {
+		let mut resp_ok = res?;
+
+		if let Some(rule) = matching_cors_rule {
+			add_cors_headers(&mut resp_ok, rule)
+				.ok_or_internal_error("Invalid bucket CORS configuration")?;
+		}
+		Ok(resp_ok)
 	}
 
 	async fn handle(
@@ -213,16 +228,8 @@ impl ApiHandler for S3ApiServer {
 				.await
 			}
 			Endpoint::PutObject { key } => {
-				// handle_put(garage, req, &bucket, &key, content_sha256)
-				let put_resp = handle_put(garage.clone(), req, &bucket, &key, content_sha256).await?;
-				// Look more into status to maybe not limit to status 200-299
-				if put_resp.status().is_success() {
-					// Is there already a ackground runner in Garage?
-					// Used to be one with last year version with Arc<BackgroundRunner>
-					// Maybe look at spawn_workers(&bg)
-					let _ = tokio::spawn(call_hook(garage.clone(), ObjectHook::new("PutObject", bucket_name, bucket_id, &key, api_key.key_id))).await;
-				}
-				Ok(put_resp)
+				let response = handle_put(garage.clone(), req, &bucket, &key, content_sha256).await;
+				response
 			}
 			Endpoint::AbortMultipartUpload { key, upload_id } => {
 				handle_abort_multipart_upload(garage, bucket_id, &key, &upload_id).await

@@ -11,6 +11,7 @@ use garage_util::error::Error as GarageError;
 use garage_util::socket_address::UnixOrTCPSocketAddress;
 
 use garage_model::garage::Garage;
+use garage_model::bucket_table::CorsRule;
 
 use crate::generic_server::*;
 use crate::k2v::error::*;
@@ -62,6 +63,20 @@ impl ApiHandler for K2VApiServer {
 			bucket_name,
 			endpoint,
 		})
+	}
+
+	fn check_status(
+		&self,
+		matching_cors_rule: Option<&CorsRule>,
+		res: Result<Response<Body>, Error>
+	) -> Result<Response<Body>, self::Error> {
+		let mut resp_ok = res?;
+
+		if let Some(rule) = matching_cors_rule {
+			add_cors_headers(&mut resp_ok, rule)
+				.ok_or_internal_error("Invalid bucket CORS configuration")?;
+		}
+		Ok(resp_ok)
 	}
 
 	async fn handle(

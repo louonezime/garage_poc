@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use garage_model::garage::Garage;
-use hyper::{Body, Client, Method, Request};
-use hyper_tls::HttpsConnector;
 use serde::Serialize;
 
-use crate::s3::error::*;
+use hyper::{Body, Client, Method, Request};
+use hyper_tls::HttpsConnector;
 
 use garage_util::data::FixedBytes32;
+
+use garage_model::garage::Garage;
+
+use crate::s3::error::*;
 
 // #[derive(Debug, Serialize, PartialEq)]
 // enum PayloadType {
