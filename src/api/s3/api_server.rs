@@ -213,16 +213,18 @@ impl ApiHandler for S3ApiServer {
 				.await
 			}
 			Endpoint::PutObject { key } => {
-				// handle_put(garage, req, &bucket, &key, content_sha256)
-				let put_resp = handle_put(garage.clone(), req, &bucket, &key, content_sha256).await?;
-				// Look more into status to maybe not limit to status 200-299
-				if put_resp.status().is_success() {
-					// Is there already a ackground runner in Garage?
+				let mut response = handle_put(garage.clone(), req, &bucket, &key, content_sha256).await?;
+				if response.status().is_success() {
+					// Use background runner in Garage?
 					// Used to be one with last year version with Arc<BackgroundRunner>
 					// Maybe look at spawn_workers(&bg)
 					let _ = tokio::spawn(call_hook(garage.clone(), ObjectHook::new("PutObject", bucket_name, bucket_id, &key, api_key.key_id))).await;
 				}
-				Ok(put_resp)
+				if let Some(rule) = matching_cors_rule {
+					add_cors_headers(&mut response, rule)
+						.ok_or_internal_error("Invalid bucket CORS configuration")?;
+				}
+				Ok(response)
 			}
 			Endpoint::AbortMultipartUpload { key, upload_id } => {
 				handle_abort_multipart_upload(garage, bucket_id, &key, &upload_id).await
